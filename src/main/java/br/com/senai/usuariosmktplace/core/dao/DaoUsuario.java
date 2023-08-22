@@ -4,9 +4,9 @@ import br.com.senai.usuariosmktplace.core.domain.Usuario;
 
 public interface DaoUsuario {
 
-	public void inserirUsuario(Usuario usuario);
+	public void inserir(Usuario usuario);
 	
-	public void alterarUsuario(Usuario usuario);
+	public void alterar(Usuario usuario);
 	
 	public Usuario buscarPor(String login);
 }

@@ -23,7 +23,7 @@ public class DaoPostgresUsuario implements DaoUsuario{
 	}
 
 	@Override
-	public void inserirUsuario(Usuario usuario) {
+	public void inserir(Usuario usuario) {
 		PreparedStatement ps = null;
 		try {
 			ps = conexao.prepareStatement(INSERT);
@@ -39,7 +39,7 @@ public class DaoPostgresUsuario implements DaoUsuario{
 	}
 
 	@Override
-	public void alterarUsuario(Usuario usuario) {
+	public void alterar(Usuario usuario) {
 		PreparedStatement ps = null;
 		try {
 			ManagerDb.getInstance().configurarAutocommitDa(conexao, false);

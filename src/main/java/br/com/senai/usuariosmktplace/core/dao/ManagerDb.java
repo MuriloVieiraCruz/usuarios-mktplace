@@ -1,6 +1,5 @@
 package br.com.senai.usuariosmktplace.core.dao;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,14 +15,15 @@ public class ManagerDb {
 	
 	private ManagerDb() {		
 		try {
-			InputStream is = new FileInputStream("src/main/resources/application.properties");
+			InputStream is = ManagerDb.class.getClassLoader().getResourceAsStream("application.properties");
 			Properties config = new Properties();
 			config.load(is);
 			
 			Class.forName(config.getProperty("database-jdbc-driver")).getDeclaredConstructor().newInstance();
 			this.conexao = DriverManager.getConnection(
 					config.getProperty("database-url"), 
-					config.getProperty("database-user"), config.getProperty("database-password"));
+					config.getProperty("database-user"), 
+					config.getProperty("database-password"));
 		}catch (Exception e) {
 			throw new RuntimeException("Ocorreu um erro de conex�o "
 					+ "com o banco de dados. Motivo: " + e.getMessage());

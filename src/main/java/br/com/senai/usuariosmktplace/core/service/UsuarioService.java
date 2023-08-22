@@ -3,6 +3,7 @@ package br.com.senai.usuariosmktplace.core.service;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,13 +26,46 @@ public class UsuarioService {
 		return Normalizer.normalize(nomeCompleto, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
 	}
 	
+	public String gerarHashDa(String senha) {
+		return new DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(senha);
+	}
+	
+	public Usuario inserir(Usuario usuario) {
+		this.validar(usuario);
+		String login = gerarLoginPor(usuario.getNomeCompleto());
+		String senhaCriptografada = gerarHashDa(usuario.getSenha());
+		usuario.setLogin(login);
+		usuario.setSenha(senhaCriptografada);
+		this.dao.inserir(usuario);
+		return usuario;
+	}
+	
+	public void alterar(Usuario usuario, String novaSenha) throws IllegalAccessException {
+		Usuario usuarioDoBanco = dao.buscarPor(usuario.getLogin()); 
+		
+		if (usuarioDoBanco != null) {
+			
+			String senhaAntigaHash = gerarHashDa(usuario.getSenha());
+			String novaSenhaHash = gerarHashDa(novaSenha);
+			if (senhaAntigaHash.equals(usuarioDoBanco.getSenha())) {
+				usuario.setSenha(novaSenhaHash);
+				dao.alterar(usuario);
+			} else {
+				throw new IllegalAccessException("A senha está errada!");
+			}
+			
+		} else {
+			throw new IllegalArgumentException("O login informado não existe no banco de dados!");
+		}
+	}
+	
 	public List<String> fracionar(String nomeCompleto) {
 		List<String> nomeFracionado = new ArrayList<String>();
 		if (nomeCompleto != null && !nomeCompleto.isBlank()) {
 			
 			String[] partesDoNome = nomeCompleto.split(" ");
 			
-			String regex = "^[a-z][a-z]+\\s[a-z][a-z]+$";
+			String regex = "^[A-Z][a-z]+(\\s[A-Z][a-z]+)+$";
 			Pattern pattern = Pattern.compile(regex);
 			Matcher matcher = pattern.matcher(nomeCompleto);
 			
@@ -78,74 +112,65 @@ public class UsuarioService {
 					usuarioEncontrado = dao.buscarPor(loginDisponivel);
 				}
 				loginGerado = loginDisponivel;
+				
+				if (loginGerado.length() > 5 && loginGerado.length() < 50) {
+					return loginGerado;
+				} else {
+					throw new IllegalArgumentException("Forneça um nome e sobrenome que fique entre 5 e 50 caracteres!");
+				}
 		}
 		
-		if (loginGerado.length() > 5 && loginGerado.length() < 50) {
-			return loginGerado;
-		} else {
-			throw new IllegalArgumentException("Forneça um nome e sobrenome que fique entre 5 e 50 caracteres!");
-		}
+		throw new IllegalArgumentException("erro");
 			
 	}
 	
-	public String gerarHashDa(String senha) {
-		return new DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(senha);
-	}
-	
-	public void validarNome(String nomeCompleto) {
-		if (nomeCompleto != null) {
-			
-			boolean isNomeInvalido = nomeCompleto.isBlank()
-					|| nomeCompleto.length() < 5
-					|| nomeCompleto.length() > 50;
+	private void validar(Usuario usuario) {
+		if (usuario != null) {
+			boolean isNomeInvalido = usuario.getNomeCompleto().isBlank()
+					|| usuario.getNomeCompleto().length() < 5
+					|| usuario.getNomeCompleto().length() > 50;
 					
 			if (isNomeInvalido) {
 				throw new IllegalArgumentException("O nome é obrigatório e deve conter entre 5 e 120 caracteres!");
 			}
-		}
-	}
-	
-	public void validarSenha(String senha) {
-		if (senha != null) {
 			
-			boolean isSenhaInvalida = senha.length() < 6
-					|| senha.length() > 15
-					|| !senha.matches("^(?=.*[a-zA-Z])(?=.*\\d).+$");
+			boolean isSenhaInvalida = usuario.getSenha().length() < 6
+					|| usuario.getSenha().length() > 15
+					|| !usuario.getSenha().matches("^(?=.*[a-zA-Z])(?=.*\\d).+$");
 					
 			if (isSenhaInvalida) {
 				throw new IllegalArgumentException("A senha deve conter entre 6 e 15 caracteres com letras e numeros!");
 			}
 		} else {
-			throw new IllegalArgumentException("A senha é obrigatória!");
+			throw new IllegalArgumentException("O usuario não pode ser nulo");
 		}
 	}
 	
-	public Usuario cadastrar(String nomeCompleto, String senha) {
-		validarNome(nomeCompleto);
-		validarSenha(senha);
-		String login = gerarLoginPor(nomeCompleto);
-		String senhaCriptografada = gerarHashDa(senha);
-		Usuario usuario = new Usuario(login, nomeCompleto, senhaCriptografada);
-		dao.inserirUsuario(usuario);
-		return usuario;
-	}
-	
-	public void alterar(Usuario usuario, String novaSenha) {
-		Usuario usuarioDoBanco = dao.buscarPor(usuario.getLogin()); 
-		
-		if (usuarioDoBanco != null) {
-			
-			String senhaAntigaHash = gerarHashDa(usuario.getSenha());
-			String novaSenhaHash = gerarHashDa(novaSenha);
-			if (senhaAntigaHash.equals(usuarioDoBanco.getSenha())) {
-				usuario.setSenha(novaSenhaHash);
-				dao.alterarUsuario(usuario);
-			} 
-			
+	public String resetSenhaDo(String login) {
+		if (login != null) {
+			Usuario usuarioDoBanco = dao.buscarPor(login);
+			if (usuarioDoBanco != null) {
+				
+				final String chars = "abcdefghijklmnopqrstuvwxyz123456789";
+				
+				Random random = new Random();
+				StringBuilder builder = new StringBuilder();
+				
+				for (int i = 0; i < 6; i++) {
+					int randomIndex = random.nextInt(chars.length());
+					builder.append(chars.charAt(randomIndex));
+				}
+				String senhaResetada = builder.toString();
+				
+				usuarioDoBanco.setSenha(senhaResetada);
+				dao.alterar(usuarioDoBanco);
+				
+				return senhaResetada;
+			} else {
+				throw new IllegalArgumentException("Usuario inexistente!");
+			}	
 		} else {
-			throw new IllegalArgumentException("O login informado não existe no banco de dados!");
+			throw new IllegalArgumentException("O login é obrigatório!");
 		}
-
 	}
-
 }
