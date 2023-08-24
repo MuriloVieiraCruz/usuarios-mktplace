@@ -56,4 +56,11 @@ public class Usuario {
 		Usuario other = (Usuario) obj;
 		return Objects.equals(login, other.login);
 	}
+
+	@Override
+	public String toString() {
+		return "Usuario [login=" + login + ", nomeCompleto=" + nomeCompleto + ", senha=" + senha + "]";
+	}
+	
+	
 }

@@ -4,11 +4,13 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.codec.digest.MessageDigestAlgorithms;
+
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 import br.com.senai.usuariosmktplace.core.dao.DaoUsuario;
 import br.com.senai.usuariosmktplace.core.dao.FactoryDao;
@@ -22,22 +24,14 @@ public class UsuarioService {
 		this.dao = FactoryDao.getInstance().getDaoUsuario();
 	}
 	
-	public String removerAcentoDo(String nomeCompleto) {
-		return Normalizer.normalize(nomeCompleto, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
-	}
-	
-	public String gerarHashDa(String senha) {
-		return new DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(senha);
-	}
-	
-	public Usuario inserir(Usuario usuario) {
-		this.validar(usuario);
-		String login = gerarLoginPor(usuario.getNomeCompleto());
-		String senhaCriptografada = gerarHashDa(usuario.getSenha());
-		usuario.setLogin(login);
-		usuario.setSenha(senhaCriptografada);
+	public Usuario inserir(String nomeCompleto, String senha) {
+		this.validar(nomeCompleto ,senha);
+		String login = gerarLoginPor(nomeCompleto);
+		String senhaCriptografada = gerarHashDa(senha);
+		Usuario usuario = new Usuario(login, nomeCompleto, senhaCriptografada);
 		this.dao.inserir(usuario);
-		return usuario;
+		Usuario usuarioSalvo = dao.buscarPor(login);
+		return usuarioSalvo;
 	}
 	
 	public void alterar(Usuario usuario, String novaSenha) throws IllegalAccessException {
@@ -59,39 +53,39 @@ public class UsuarioService {
 		}
 	}
 	
-	public List<String> fracionar(String nomeCompleto) {
+	private String removerAcentoDo(String nomeCompleto) {
+		return Normalizer.normalize(nomeCompleto, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
+	}
+	
+	private String gerarHashDa(String senha) {
+		return new DigestUtils(MessageDigestAlgorithms.SHA3_256).digestAsHex(senha);
+	}
+	
+	private List<String> fracionar(String nomeCompleto) {
 		List<String> nomeFracionado = new ArrayList<String>();
 		if (nomeCompleto != null && !nomeCompleto.isBlank()) {
 			
 			String[] partesDoNome = nomeCompleto.split(" ");
 			
-			String regex = "^[A-Z][a-z]+(\\s[A-Z][a-z]+)+$";
-			Pattern pattern = Pattern.compile(regex);
-			Matcher matcher = pattern.matcher(nomeCompleto);
-			
-			if (matcher.matches()) {
-				for (String parte : partesDoNome) {
-					boolean isNaoContemArtigo = !parte.equalsIgnoreCase("de") 
-							&& !parte.equalsIgnoreCase("da")
-							&& !parte.equalsIgnoreCase("do")
-							&& !parte.equalsIgnoreCase("e")
-							&& !parte.equalsIgnoreCase("dos")
-							&& !parte.equalsIgnoreCase("das");
-					
-					if (isNaoContemArtigo) {
-						nomeFracionado.add(parte.toLowerCase());
-					}
+			for (String parte : partesDoNome) {
+				boolean isNaoContemArtigo = !parte.equalsIgnoreCase("de") 
+						&& !parte.equalsIgnoreCase("da")
+						&& !parte.equalsIgnoreCase("do")
+						&& !parte.equalsIgnoreCase("e")
+						&& !parte.equalsIgnoreCase("dos")
+						&& !parte.equalsIgnoreCase("das");
+				
+				if (isNaoContemArtigo) {
+					nomeFracionado.add(parte.toLowerCase());
 				}
-				return nomeFracionado;
-			} else {
-				throw new IllegalArgumentException("O campo deve ser composto por nome e sobrenome!");
 			}
+				return nomeFracionado;
 		} else {
 			throw new IllegalArgumentException("O nome não pode ser nulo!");
 		}
 	}
 	
-	public String gerarLoginPor(String nomeCompleto) {
+	private String gerarLoginPor(String nomeCompleto) {
 		nomeCompleto = removerAcentoDo(nomeCompleto);
 		List<String> partesDoNome = fracionar(nomeCompleto);
 		String loginGerado = null;
@@ -124,29 +118,43 @@ public class UsuarioService {
 			
 	}
 	
-	private void validar(Usuario usuario) {
-		if (usuario != null) {
-			boolean isNomeInvalido = usuario.getNomeCompleto().isBlank()
-					|| usuario.getNomeCompleto().length() < 5
-					|| usuario.getNomeCompleto().length() > 50;
+	private void validar(String senha) {
+			boolean isSenhaInvalida = Strings.isNullOrEmpty(senha)
+					|| senha.length() < 6
+					|| senha.length() > 15
+					|| senha.isBlank()
+					|| senha == null;
 					
-			if (isNomeInvalido) {
-				throw new IllegalArgumentException("O nome é obrigatório e deve conter entre 5 e 120 caracteres!");
-			}
+			Preconditions.checkArgument(!isSenhaInvalida, 
+					"A senha é obrigatória deve conter entre 6 e 15 caracteres!");
+		
+			boolean isContemLetra = CharMatcher.inRange('a', 'z').countIn(senha.toLowerCase()) > 0;
+			boolean isContemNumero = CharMatcher.inRange('0', '9').countIn(senha) > 0;;
+			boolean isCaractereInvalido = senha.contains(" ");
 			
-			boolean isSenhaInvalida = usuario.getSenha().length() < 6
-					|| usuario.getSenha().length() > 15
-					|| !usuario.getSenha().matches("^(?=.*[a-zA-Z])(?=.*\\d).+$");
-					
-			if (isSenhaInvalida) {
-				throw new IllegalArgumentException("A senha deve conter entre 6 e 15 caracteres com letras e numeros!");
-			}
-		} else {
-			throw new IllegalArgumentException("O usuario não pode ser nulo");
-		}
+			Preconditions.checkArgument(isContemLetra && isContemNumero && !isCaractereInvalido, 
+					"A senha deve conter letras e números");
+
+		
 	}
 	
-	public String resetSenhaDo(String login) {
+	private void validar(String nomeCompleto, String senha) {
+		List<String> partesDoNome = fracionar(nomeCompleto);
+		
+		boolean isNomeCompleto = partesDoNome.size() > 1;
+		
+		boolean isNomeValido = !Strings.isNullOrEmpty(nomeCompleto)
+				&& isNomeCompleto
+				&& nomeCompleto.length() >= 5
+				&& nomeCompleto.length() <= 120;
+				
+		Preconditions.checkArgument(isNomeValido, 
+				"O nome é obrigatório e deve conter sobrenome e deve estar entre 5 e 50 caracteres!");
+		
+		this.validar(senha);
+	}
+	
+	private String resetSenhaDo(String login) {
 		if (login != null) {
 			Usuario usuarioDoBanco = dao.buscarPor(login);
 			if (usuarioDoBanco != null) {
