@@ -93,6 +93,9 @@ public class UsuarioService {
 		if (!partesDoNome.isEmpty()) {
 			for (int i = 1; i < partesDoNome.size(); i++) {
 					loginGerado = partesDoNome.get(0) + "." + partesDoNome.get(i);
+					if (loginGerado.length() > 40) {
+						loginGerado = loginGerado.substring(0, 50);
+					}
 					usuarioEncontrado = dao.buscarPor(loginGerado);
 					if (usuarioEncontrado == null) {
 						return loginGerado;
