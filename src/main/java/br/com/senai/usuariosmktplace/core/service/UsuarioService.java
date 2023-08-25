@@ -3,10 +3,10 @@ package br.com.senai.usuariosmktplace.core.service;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.codec.digest.MessageDigestAlgorithms;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
@@ -34,23 +34,42 @@ public class UsuarioService {
 		return usuarioSalvo;
 	}
 	
-	public void alterar(Usuario usuario, String novaSenha) throws IllegalAccessException {
-		Usuario usuarioDoBanco = dao.buscarPor(usuario.getLogin()); 
+	public Usuario atualizarPor(String login, String nomeCompleto, String senhaNova, String senhaAntiga) throws IllegalAccessException {
 		
-		if (usuarioDoBanco != null) {
+		Preconditions.checkArgument(!Strings.isNullOrEmpty(login),
+				"O login é obrigatório para a atualização");
+		
+		Preconditions.checkArgument(Strings.isNullOrEmpty(senhaAntiga), 
+				"A senha antiga é obrigatória para a atualização");
+		
+		this.validar(nomeCompleto, senhaNova);
+		
+		Usuario usuarioSalvo = dao.buscarPor(login);
+		
+		Preconditions.checkNotNull(usuarioSalvo, 
+				"Não foi encontrado usuario vinulado ao login");
 			
-			String senhaAntigaHash = gerarHashDa(usuario.getSenha());
-			String novaSenhaHash = gerarHashDa(novaSenha);
-			if (senhaAntigaHash.equals(usuarioDoBanco.getSenha())) {
-				usuario.setSenha(novaSenhaHash);
-				dao.alterar(usuario);
-			} else {
-				throw new IllegalAccessException("A senha está errada!");
-			}
+			String senhaAntigaHash = gerarHashDa(senhaAntiga);
 			
-		} else {
-			throw new IllegalArgumentException("O login informado não existe no banco de dados!");
-		}
+			boolean isSenhaValida = senhaAntigaHash.equals(usuarioSalvo.getSenha());
+			
+			Preconditions.checkArgument(isSenhaValida, 
+					"A senha antiga não confere");
+			
+			Preconditions.checkArgument(!senhaAntiga.equals(senhaNova), 
+					"A senha antiga não pode ser anterior");
+			
+			String novaSenhaHash = gerarHashDa(senhaNova);
+			
+			Usuario usuarioAlterado = new Usuario(login, nomeCompleto, novaSenhaHash);
+			
+			this.dao.alterar(usuarioAlterado);
+			
+			dao.buscarPor(login);
+			
+			return usuarioAlterado;
+			
+			
 	}
 	
 	private String removerAcentoDo(String nomeCompleto) {
@@ -109,12 +128,7 @@ public class UsuarioService {
 					usuarioEncontrado = dao.buscarPor(loginDisponivel);
 				}
 				loginGerado = loginDisponivel;
-				
-				if (loginGerado.length() > 5 && loginGerado.length() < 50) {
-					return loginGerado;
-				} else {
-					throw new IllegalArgumentException("Forneça um nome e sobrenome que fique entre 5 e 50 caracteres!");
-				}
+				return loginGerado;
 		}
 		
 		throw new IllegalArgumentException("erro");
@@ -162,17 +176,7 @@ public class UsuarioService {
 			Usuario usuarioDoBanco = dao.buscarPor(login);
 			if (usuarioDoBanco != null) {
 				
-				final String chars = "abcdefghijklmnopqrstuvwxyz123456789";
-				
-				Random random = new Random();
-				StringBuilder builder = new StringBuilder();
-				
-				for (int i = 0; i < 6; i++) {
-					int randomIndex = random.nextInt(chars.length());
-					builder.append(chars.charAt(randomIndex));
-				}
-				String senhaResetada = builder.toString();
-				
+				String senhaResetada = RandomStringUtils.random(6, true, true);
 				usuarioDoBanco.setSenha(senhaResetada);
 				dao.alterar(usuarioDoBanco);
 				
