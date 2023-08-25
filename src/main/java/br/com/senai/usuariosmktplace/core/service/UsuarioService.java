@@ -67,9 +67,19 @@ public class UsuarioService {
 			
 			dao.buscarPor(login);
 			
-			return usuarioAlterado;
-			
-			
+			return usuarioAlterado;		
+	}
+	
+	public Usuario buscarPor(String login) {
+		Preconditions.checkArgument(!Strings.isNullOrEmpty(login), 
+				"O login é obrigatório");
+		
+		Usuario usuarioSalvo = dao.buscarPor(login);
+		
+		Preconditions.checkNotNull(usuarioSalvo, 
+				"Não foi encontrado usuario vinculado ao login vinculado");
+		
+		return usuarioSalvo;
 	}
 	
 	private String removerAcentoDo(String nomeCompleto) {
