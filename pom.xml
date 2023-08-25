@@ -4,6 +4,12 @@
   <artifactId>usuarios-mktplace</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <dependencies>
+	  <dependency>
+    	<groupId>org.projectlombok</groupId>
+    	<artifactId>lombok</artifactId>
+    	<version>1.18.28</version>
+    	<scope>provided</scope>
+	</dependency>
 	<dependency>
     	<groupId>org.postgresql</groupId>
     	<artifactId>postgresql</artifactId>
