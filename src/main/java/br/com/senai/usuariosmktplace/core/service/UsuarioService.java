@@ -7,6 +7,8 @@ import java.util.List;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.codec.digest.MessageDigestAlgorithms;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
@@ -15,13 +17,19 @@ import com.google.common.base.Strings;
 import br.com.senai.usuariosmktplace.core.dao.DaoUsuario;
 import br.com.senai.usuariosmktplace.core.dao.FactoryDao;
 import br.com.senai.usuariosmktplace.core.domain.Usuario;
+import jakarta.annotation.PostConstruct;
 
+@Service
 public class UsuarioService {
 	
 	private DaoUsuario dao;
 	
-	public UsuarioService() {
-		this.dao = FactoryDao.getInstance().getDaoUsuario();
+	@Autowired
+	private FactoryDao factory;
+	
+	@PostConstruct
+	public void inicializar() {
+		this.dao = factory.getDaoUsuario();
 	}
 	
 	public Usuario inserir(String nomeCompleto, String senha) {
@@ -182,20 +190,19 @@ public class UsuarioService {
 	}
 	
 	private String resetSenhaDo(String login) {
-		if (login != null) {
+		
+		Preconditions.checkArgument(!Strings.isNullOrEmpty(login),
+				"O login é obrigatório");
+		
 			Usuario usuarioDoBanco = dao.buscarPor(login);
-			if (usuarioDoBanco != null) {
+			
+			Preconditions.checkNotNull(usuarioDoBanco,
+				"Não foi encontrado usuario vinculado ao login vinculado");
 				
-				String senhaResetada = RandomStringUtils.random(6, true, true);
-				usuarioDoBanco.setSenha(senhaResetada);
-				dao.alterar(usuarioDoBanco);
+			String senhaResetada = RandomStringUtils.random(6, true, true);
+			usuarioDoBanco.setSenha(senhaResetada);
+			dao.alterar(usuarioDoBanco);
 				
-				return senhaResetada;
-			} else {
-				throw new IllegalArgumentException("Usuario inexistente!");
-			}	
-		} else {
-			throw new IllegalArgumentException("O login é obrigatório!");
-		}
+			return senhaResetada;
 	}
 }
