@@ -74,6 +74,7 @@ public class DaoPostgresUsuario implements DaoUsuario{
 			if (rs.next()) {
 				return extrairDo(rs);
 			}
+			ManagerDb.getInstance().configurarAutocommitDa(conexao, true);
 			return null;
 		}catch (Exception e) {
 			throw new RuntimeException("Ocorreu um erro ao buscar no banco. Motivo:" + e.getMessage());

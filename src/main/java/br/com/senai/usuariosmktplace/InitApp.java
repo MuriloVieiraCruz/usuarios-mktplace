@@ -21,6 +21,7 @@ public class InitApp {
 	@Bean
 	public CommandLineRunner commandLineRunner() {
 		return args -> {
+			service.inserir("Murilo Vieira Cruz", "murilinho123");
 			System.out.println(service.buscarPor("alan.duarte").getNomeCompleto());
 		};
 	}

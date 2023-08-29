@@ -65,7 +65,7 @@ public class UsuarioService {
 					"A senha antiga não confere");
 			
 			Preconditions.checkArgument(!senhaAntiga.equals(senhaNova), 
-					"A senha antiga não pode ser anterior");
+					"A senha nova não pode ser igual a anterior");
 			
 			String novaSenhaHash = gerarHashDa(senhaNova);
 			
